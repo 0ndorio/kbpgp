@@ -8,6 +8,7 @@ K = konst.kb
 {BaseKeyPair,BaseKey} = require '../basekeypair'
 {generate,BaseEccKey} = require './base'
 {ECDH} = require './ecdh'
+{Point} = require 'keybase-ecurve'
 
 #=================================================================
 
@@ -15,6 +16,9 @@ class Pub extends BaseEccKey
 
   @type : C.public_key_algorithms.ECDSA
   type : Pub.type
+
+  @verification : C.verification_algorithms.default
+  verification : Pub.verification
 
   #----------------
 
@@ -36,6 +40,15 @@ class Pub extends BaseEccKey
   #----------------
 
   verify : ([r, s], h, cb) ->
+    V = C.verification_algorithms
+
+    switch @verification
+      when V.butun
+        @verify_butun([r, s], h, cb)
+      else
+        @verify_default([r, s], h, cb)
+
+  verify_default : ([r, s], h, cb) ->
     err = null
     hi = @trunc_hash(h)
 
@@ -54,6 +67,27 @@ class Pub extends BaseEccKey
       v = p.affineX.mod(n)
       err = new Error "verification failed" unless v.equals(r)
     cb err
+
+verify_butun : ([r, s], h, cb) ->
+  err = null
+  hi = @trunc_hash(h)
+
+  R = Point.decodeFrom(@curve, R.toBuffer())
+
+  if ((s.signum() <= 0) or (s.compareTo(@curve.p) > 0))
+    err = new Error "bad s"
+  else if (!@curve.isOnCurve(R))
+    err = new Error "bad R"
+  else
+
+    u1 = @curve.G.multiply(s)
+
+    r = R.affineX.mod(@curve.n)
+    u2 = @R.multiplyTwo(r, R, hi)
+
+    err = new Error "verification failed" unless u1.equals(u2)
+
+  cb err
 
 #=================================================================
 
@@ -123,7 +157,7 @@ class Pair extends BaseKeyPair
 
   #----------------
 
-  verify_unpad_and_check_hash : ({sig, data, hasher, hash}, cb) ->
+  verify_unpad_and_check_hash : ({sig, data, hasher, hash, verification_algorithms}, cb) ->
     @_dsa_verify_update_and_check_hash { sig, data, hasher, hash, klass : Pair }, cb
 
   #----------------

@@ -48,6 +48,7 @@ exports.openpgp = openpgp =
     signature_target : 31
     embedded_signature : 32
     issuer_fingerprint : 33
+    verification_algorithm: 100
     experimental_low : 101
     experimental_high : 110
   sig_types :  # See RFC 4880 5.2.1. Signature Types
@@ -130,6 +131,9 @@ exports.openpgp = openpgp =
     zip  : 1
     zlib : 2
     bzip : 3
+  verification_algorithms:
+    default: 0
+    butun: 1
 
 exports.kb =
   key_encryption:

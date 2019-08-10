@@ -220,6 +220,11 @@ class Signature extends Packet
         s.primary = @primary
         s.key = subkey.key
         await s._verify [ subkey ], defer(err), opts
+
+    for p in @hashed_subpackets when p instanceof VerificationAlgorithm
+      @key.pub.verification = p.verification_algorithm || C.verification_algorithms.default
+      break
+
     cb err
 
   #-----------------
@@ -723,6 +728,16 @@ class IssuerFingerprint extends SubPacket
       @fingerprint
     ]
 
+#------------
+
+class VerificationAlgorithm extends SubPacket
+  constructor : (@algorithm) ->
+    super S.verification_algorithm
+  
+  @parse : (slice) -> new VerificationAlgorithm slice.consume_rest_to_buffer()
+
+  _v_to_buffer : () -> uint_to_buffer(8, @algorithm)
+
 #===========================================================
 
 exports.Signature = Signature
@@ -796,6 +811,7 @@ class Parser
       when S.signature_target then SignatureTarget
       when S.embedded_signature then EmbeddedSignature
       when S.issuer_fingerprint then IssuerFingerprint
+      when S.verification_algorithm then VerificationAlgorithm
       else
         if type >= S.experimental_low and type <= S.experimental_high then Experimental
         else throw new Error "Unknown signature subpacket: #{type}"
@@ -825,6 +841,7 @@ exports.KeyServerPreferences = KeyServerPreferences
 exports.Issuer = Issuer
 exports.EmbeddedSignature = EmbeddedSignature
 exports.PrimaryUserId = PrimaryUserId
+exports.VerificationAlgorithm = VerificationAlgorithm
 
 #===========================================================
 
